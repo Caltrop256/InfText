@@ -48,6 +48,7 @@ import Analytics from './analytics.mjs'
 import crypto from 'crypto'
 import Zlib from 'zlib';
 import util from 'util'
+import {CronJob} from 'cron'
 
 process.on('uncaughtException', err => {
     const stream = fs.createWriteStream('./err.out', {flags: 'a', encoding: 'utf-8'});
@@ -58,6 +59,10 @@ process.on('unhandledRejection', (val, promise) => {
     const stream = fs.createWriteStream('./err.out', {flags: 'a', encoding: 'utf-8'});
     stream.write(`\n[${new Date().toUTCString()}][REJECTION] ${util.inspect(val, true, Infinity, false)} - ${util.inspect(promise, true, Infinity, false)}\n`, () => stream.close());
 })
+
+new CronJob('0 0 0 * * *', () => {
+    Chunks.backupAll();
+}, null, true, null, null, false, 0);
 
 const config = JSON.parse(fs.readFileSync('./config.json', {encoding: 'utf-8'}));
 

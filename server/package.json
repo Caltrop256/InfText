@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "canvas": "^2.9.0",
+    "cron": "^1.8.2",
     "forever-monitor": "^3.0.3",
     "mysql": "^2.18.1",
     "ws": "^8.4.0"

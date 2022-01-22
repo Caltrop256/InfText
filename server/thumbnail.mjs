@@ -40,7 +40,7 @@ const letter = code => {
     lctx.fillStyle = colors[code >> 20];
     lctx.fillRect(0, 0, unitWidth, unitHeight);
     lctx.fillStyle = colors[code >> 16 & 0xf];
-    lctx.fillText(String.fromCharCode(code & 0xffff), 0, 2);
+    lctx.fillText(String.fromCharCode(code & 0xffff), 0, 1, unitWidth);
     const data = lctx.getImageData(0, 0, unitWidth, unitHeight);
     letterTable.set(code, data);
     return data;

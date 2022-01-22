@@ -182,7 +182,24 @@ const storeNonEmpty = () => {
 setInterval(() => {
     console.log("Storing " + cache.size + " chunks!");
     storeNonEmpty().catch(console.error);
-}, 1000 * 60 * 10)
+}, 1000 * 60 * 10);
+
+exp.backupAll = () => {
+    con.query('SELECT * FROM `chunks`', (err, res) => {
+        const chunks = new Map(Array.from(cache).filter((_,c) => !c.__empty));
+        for(const row of res) {
+            const chunkData = decodeChunk(new Uint32Array(row.data.buffer));
+            const id = row.x + ',' + row.y;
+            if(!chunks.has(id)) chunks.set(id, chunkData);
+        }
+        const buf = exp.serializeChunkSequence(Array.from(chunks).map(([id, data]) => ({id, chunk: data})));
+        if(!fs.existsSync('./backups')) fs.mkdirSync('backups');
+        fs.writeFile(`./backups/b-${new Date().toISOString()}.chunks`, buf, (err) => {
+            if(err) console.error(err);
+            else console.log(`Backed up ${chunks.size} chunks!`);
+        })
+    });
+}
 
 exp.chunkWidth = chunkWidth;
 exp.chunkHeight = chunkHeight;
