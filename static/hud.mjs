@@ -41,8 +41,10 @@ if(exp.isTouchscreen) {
                     '\n': 'Enter',
                     '\t': 'Tab'
                 }
-                Caret.handleKeyPress({key: trans[inp.value.charAt(1)] || inp.value.charAt(1), isTrusted: true, preventDefault() {}});
+                const char = inp.value.charAt(inp.value.length - 1);
+                Caret.handleKeyPress({key: trans[char] || char, isTrusted: true, preventDefault() {}});
             }
+            inp.value = '';
             inp.value = '$';
         })
     });
