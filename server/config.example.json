@@ -1,0 +1,21 @@
+{
+    "port": 1312,
+    "domain": "localhost",
+    "ssl": false,
+    "cache": true,
+
+    "mysql": {
+        "chunks": {
+            "host": "localhost",
+            "user": "root",
+            "password": "",
+            "database": "inftext"
+        },
+        "analytics": {
+            "host": "localhost",
+            "user": "root",
+            "password": "",
+            "database": "meta"
+        }
+    }
+}
