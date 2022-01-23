@@ -98,7 +98,7 @@ const saveAsImage = type => {
     Draw.draw();
     Draw.processVisibleText();
     Draw.canvas.toBlob(blob => {
-        exp.saveBlob(`export${Caret.col}_${Caret.ln}.${type.substring(type.lastIndexOf('/'))}`, blob);
+        exp.saveBlob(`export${Caret.col}_${Caret.ln}.${type.substring(type.lastIndexOf('/') + 1)}`, blob);
     }, type, type == 'image/jpeg' ? 0.0 : 1.0);
 }
 
@@ -134,7 +134,7 @@ const save = type => {
         if(type == 'text/plain') {
             exp.saveBlob(`inftext${Caret.col}_${Caret.ln}.txt`, new Blob([
                 chars.map(c => c.map(t => String.fromCharCode(t & 0xffff).replace(/\s/, ' ')).join('')).join('\n')
-            ]));
+            ], {type: 'text/plain;charset=utf8'}));
         } else if(type == 'text/html') {
             const replace = {
                 '"': '&quot;',
@@ -161,12 +161,12 @@ const save = type => {
                 html += '</span></div>';
             }
             html += '</body></html>';
-            exp.saveBlob(`inftext${Caret.col}_${Caret.ln}.html`, new Blob([html]));
+            exp.saveBlob(`inftext${Caret.col}_${Caret.ln}.html`, new Blob([html], {type: 'text/html;charset=utf8'}));
         }
     }
 }
 exp.save = save;
-exp.lastType = 'text/plain';
+exp.lastType = 'text/html';
 
 const menus = {
     altModeActive: false,
@@ -209,38 +209,38 @@ const menus = {
 
             ['g', 'foreground', [
                 ['black', () => Caret.colorFg = 0],
-                ['red', () => Caret.colorFg = 1],
-                ['green', () => Caret.colorFg = 2],
-                ['yellow', () => Caret.colorFg = 3],
-                ['blue', () => Caret.colorFg = 4],
+                ['dark red', () => Caret.colorFg = 1],
+                ['dark green', () => Caret.colorFg = 2],
+                ['gold', () => Caret.colorFg = 3],
+                ['dark blue', () => Caret.colorFg = 4],
                 ['magenta', () => Caret.colorFg = 5],
-                ['cyan', () => Caret.colorFg = 6],
+                ['aqua', () => Caret.colorFg = 6],
                 ['grey', () => Caret.colorFg = 7],
                 ['gray', () => Caret.colorFg = 8],
-                ['red!', () => Caret.colorFg = 9],
-                ['green!', () => Caret.colorFg = 10],
-                ['yellow!', () => Caret.colorFg = 11],
-                ['blue!', () => Caret.colorFg = 12],
-                ['magenta!', () => Caret.colorFg = 13],
-                ['cyan!', () => Caret.colorFg = 14],
+                ['bright red', () => Caret.colorFg = 9],
+                ['bright green', () => Caret.colorFg = 10],
+                ['yellow', () => Caret.colorFg = 11],
+                ['blue', () => Caret.colorFg = 12],
+                ['light magenta', () => Caret.colorFg = 13],
+                ['cyan', () => Caret.colorFg = 14],
                 ['white', () => Caret.colorFg = 15],
             ]],
             ['b', 'background', [
                 ['black', () => Caret.colorBg = 0],
-                ['red', () => Caret.colorBg = 1],
-                ['green', () => Caret.colorBg = 2],
-                ['yellow', () => Caret.colorBg = 3],
-                ['blue', () => Caret.colorBg = 4],
+                ['dark red', () => Caret.colorBg = 1],
+                ['dark green', () => Caret.colorBg = 2],
+                ['gold', () => Caret.colorBg = 3],
+                ['dark blue', () => Caret.colorBg = 4],
                 ['magenta', () => Caret.colorBg = 5],
-                ['cyan', () => Caret.colorBg = 6],
+                ['aqua', () => Caret.colorBg = 6],
                 ['grey', () => Caret.colorBg = 7],
                 ['gray', () => Caret.colorBg = 8],
-                ['red!', () => Caret.colorBg = 9],
-                ['green!', () => Caret.colorBg = 10],
-                ['yellow!', () => Caret.colorBg = 11],
-                ['blue!', () => Caret.colorBg = 12],
-                ['magenta!', () => Caret.colorBg = 13],
-                ['cyan!', () => Caret.colorBg = 14],
+                ['bright red', () => Caret.colorBg = 9],
+                ['bright green', () => Caret.colorBg = 10],
+                ['yellow', () => Caret.colorBg = 11],
+                ['blue', () => Caret.colorBg = 12],
+                ['light magenta', () => Caret.colorBg = 13],
+                ['cyan', () => Caret.colorBg = 14],
                 ['white', () => Caret.colorBg = 15],
             ]]
         ]
@@ -250,21 +250,20 @@ const menus = {
         items: [
             ['c', 'return to center', () => {
                 Camera.teleportTo(0, 0);
-                history.pushState({x: 0, y: 0}, '', `/@0,0`);
             }],
             ['u', 'undo teleport', () => typeof history.state.x != 'undefined' && history.back(1)],
             ['r', 'redo teleport', () => history.go(1)],
             ['t', 'teleport 100', [
-                ['up', () => {const x = Caret.col, y = Caret.ln - 100; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['down', () => {const x = Caret.col, y = Caret.ln + 100; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['left', () => {const x = Caret.col - 100, y = Caret.ln; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['right', () => {const x = Caret.col + 100, y = Caret.ln; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}]
+                ['up', () => {const x = Caret.col, y = Caret.ln - 100; Camera.teleportTo(x, y);}],
+                ['down', () => {const x = Caret.col, y = Caret.ln + 100; Camera.teleportTo(x, y);}],
+                ['left', () => {const x = Caret.col - 100, y = Caret.ln; Camera.teleportTo(x, y);}],
+                ['right', () => {const x = Caret.col + 100, y = Caret.ln; Camera.teleportTo(x, y);}]
             ]],
             ['1', 'teleport 1000', [
-                ['up', () => {const x = Caret.col, y = Caret.ln - 1000; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['down', () => {const x = Caret.col, y = Caret.ln + 1000; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['left', () => {const x = Caret.col - 1000, y = Caret.ln; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}],
-                ['right', () => {const x = Caret.col + 1000, y = Caret.ln; Camera.teleportTo(x, y); history.pushState({x,y}, '', `/@${x},${y}`)}]
+                ['up', () => {const x = Caret.col, y = Caret.ln - 1000; Camera.teleportTo(x, y);}],
+                ['down', () => {const x = Caret.col, y = Caret.ln + 1000; Camera.teleportTo(x, y);}],
+                ['left', () => {const x = Caret.col - 1000, y = Caret.ln; Camera.teleportTo(x, y);}],
+                ['right', () => {const x = Caret.col + 1000, y = Caret.ln; Camera.teleportTo(x, y);}]
             ]],
             ['s', 'scroll speed', [
                 ['slow', () => Camera.scrollSpeedModifier = 0.25],
@@ -286,6 +285,10 @@ const menus = {
                     if(exp.drawForeignCarets) Socket.postMessage(JSON.stringify({pos: {ln: Caret.ln, col: Caret.col}}));
                     else Socket.postMessage(JSON.stringify({pos: null}));
             }],
+            ['i', 'inf caret cycle    ✓', () => {
+                menus['[DISPLAY]'].items.find(i => i[0].startsWith('inf caret cycle'))[0] = 'inf caret cycle    '
+                    + ((Draw.caretInfiniteBlink = !Draw.caretInfiniteBlink) ? '✓' : '✗');
+            }],
             ['t', 'fit font           ✓', () => {
                 menus['[DISPLAY]'].items.find(i => i[0].startsWith('fit font'))[0] = 'fit font           '
                     + ((Letters.fitFont = !Letters.fitFont) ? '✓' : '✗');
@@ -300,13 +303,17 @@ const menus = {
                 }, n)])
             ]],
             ['o', 'font', [
-                ['default', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = '"Courier New",monospace,Courier', Draw.cache.forEach(c => c.imageData = null))],
-                ['courier new', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = '"Courier New"', Draw.cache.forEach(c => c.imageData = null))],
-                ['courier', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = 'Courier', Draw.cache.forEach(c => c.imageData = null))],
-                ['monaco', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = 'monaco', Draw.cache.forEach(c => c.imageData = null))],
-                ['monospace', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = 'monospace', Draw.cache.forEach(c => c.imageData = null))],
-                ['andalé mono', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = '"Andalé Mono"', Draw.cache.forEach(c => c.imageData = null))],
-                ['lucida console', () => Chunk.changeFontSize(Chunk.fontSize, Chunk.fontFamily = '"Lucida Console"', Draw.cache.forEach(c => c.imageData = null))],
+                ['default', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = '"Courier New",monospace,Courier'), Draw.cache.forEach(c => c.imageData = null))],
+                ['courier new', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = '"Courier New"'), Draw.cache.forEach(c => c.imageData = null))],
+                ['courier', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = 'Courier'), Draw.cache.forEach(c => c.imageData = null))],
+                ['monaco', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = 'monaco'), Draw.cache.forEach(c => c.imageData = null))],
+                ['monospace', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = 'monospace'), Draw.cache.forEach(c => c.imageData = null))],
+                ['andalé mono', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = '"Andalé Mono"'), Draw.cache.forEach(c => c.imageData = null))],
+                ['lucida console', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = '"Lucida Console"'), Draw.cache.forEach(c => c.imageData = null))],
+            ]],
+            ['e', 'color scheme', [
+                ['default', () => {localStorage.setItem('scheme', 'default'); Letters.colors = Letters.colorVariations.default; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null)}],
+                ['legacy', () => {localStorage.setItem('scheme', 'legacy'); Letters.colors = Letters.colorVariations.legacy; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null);}]
             ]]
         ]
     },
@@ -432,6 +439,7 @@ const bgClickable = {
     fixed: true,
     callback(col, ln) {
         Caret.colorBg = col;
+        localStorage.setItem('cbg', col);
     }
 }
 exp.clickables.push(bgClickable);
@@ -439,6 +447,7 @@ const fgClickable = {
     fixed: true,
     callback(col, ln) {
         Caret.colorFg = col;
+        localStorage.setItem('cfg', col);
     }
 }
 exp.clickables.push(fgClickable);
@@ -734,6 +743,7 @@ exp.draw = (canvas, ctx) => {
     drawMenus(canvas, ctx);
 
     if(Socket._connectionState == 0) popup(canvas, ctx, Popups.disconnected); 
+    else if(Socket._connectionState == -2) popup(canvas, ctx, Popups.ratelimit);
     else if(popUpInfo.text.length) popup(canvas, ctx, popUpInfo.text);
 }
 

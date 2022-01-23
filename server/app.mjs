@@ -41,7 +41,7 @@ if(process.stdout.clearLine) {
 
 import http from 'http'
 import {WebSocketServer} from 'ws'
-import fs from 'fs'
+import fs, { unwatchFile } from 'fs'
 import Chunks from './chunks.mjs'
 import Thumbnail from './thumbnail.mjs'
 import Analytics from './analytics.mjs'
@@ -88,6 +88,77 @@ if(config.cache) for(const path in paths) {
     });
 }
 
+const getHTML = req => {
+    const title = 'InfText';
+    const desc = 'An infinite canvas of text to edit and explore! All changes and edits you make are visible to all other visitors in real time!';
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="theme-color" content="${Thumbnail.colors[Chunks.defaultBackground]}">
+<meta name="robots" content="index, follow">
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="twitter:creator" content="@Caltrop256">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:title" content="${title}">
+<meta property="twitter:title" content="${title}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://${config.domain}/">
+<meta property="og:description" content="${desc}">
+<meta property="twitter:description" content="${desc}">
+<meta property="og:site_name" content="${config.domain}">
+<meta property="og:image" content="https://${config.domain}${req.url}${req.url.endsWith('/') ? '' : '/'}thumbnail">
+<title>./${title.toLowerCase()}</title>
+<link rel="stylesheet" href="style.css">
+<link rel="shortcut icon" type="image/png" href="favicon.png" />
+<link rel="icon" type="image/png" href="favicon.png" />
+</head>
+<body>
+<div class="terminal">
+<p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> ./inftext</p>
+<noscript>
+<p><span class="red">[ERR]</span> javascript disabled!</p>
+<p><span class="red">[ERR]</span> InfText requires javascript for rendering the screen and interacting with other players</p>
+<p><span class="red">[ERR]</span> we do not use javascript for tracking or cookies, and honor the DoNotTrack header</p>
+<p><span class="red">[ERR]</span> try enabling javascript and reloading the page!</p>
+<br>
+<p>exited with code -1668641893 (0x63757465)</p>
+<br>
+<br>
+<span><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> <span>
+</noscript>
+<span id="caret" class="caret">&nbsp;</span>
+<p class="hidden"><span class="blue">[INFO]</span> loading resources...</p>
+<script>
+const reveal = function(i) {
+const el = document.getElementsByClassName('hidden')[i]; 
+el.style.display = 'block';
+document.getElementById('caret').remove();
+el.insertAdjacentHTML('beforeend', '<span id="caret" class="caret">&nbsp;</span>');
+return el;
+};
+window.onerror = function(message, source, lineno, colno) {
+window.onerror = null;
+reveal(3);
+reveal(4).innerHTML += source.substring(source.lastIndexOf('/') + 1) + ' > ' + 'ln: ' + lineno + ' col: ' + colno + ' - ' + message;
+reveal(4);
+reveal(5);
+}
+reveal(0);
+</script>
+<p class="hidden"><span class="blue">[INFO]</span> connecting...</p>
+<p class="hidden"><span class="blue">[INFO]</span> drawing chunks...</p>
+<p class="hidden"><span class="red">[ERR]</span> an error occured while loading the page, your browser may be out of date<br></p>
+<p class="hidden"><span class="red">[ERR]</span> </p>
+<p class="hidden"><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> </p>
+</div>
+<script defer type="module" src="./draw.mjs"></script>
+</body>
+</html>`;
+return html;
+}
+
 const hearbeatDuration = 5000;
 const server = http.createServer((req, res) => {
     const headers = {
@@ -115,101 +186,27 @@ const server = http.createServer((req, res) => {
             case 'HEAD' :
                 isHead = true;
             case 'GET' :
-                const url = req.url.replace(/^\/@(-?\d+),(-?\d+)($|\/)/, '/');
-                switch(url) {
-                    case '/gateway' :
-                        headers['Content-Type'] = 'application/json';
-                        const body = JSON.stringify({
-                            url: `ws${config.ssl ? 's' : ''}://${config.domain}:${config.port}`,
-                            heartbeat: hearbeatDuration
-                        })
-                        res.writeHead(200, headers);
-                        headers['Content-Length'] = Buffer.byteLength(body);
-                        if(!isHead) res.write(body);
-                        res.end();
-                        break;
-                    case '/thumbnail' :
-                        const [, x, y] = req.url.match(/^\/@(-?\d+),(-?\d+)($|\/)/) || [, 0, 0];
-                        Thumbnail.getThumbnail(+x, +y).then(data => {
-                            headers['Content-Type'] = 'image/png';
-                            headers['Content-length'] = Buffer.byteLength(data);
-                            res.writeHead(200, headers);
-                            if(!isHead) res.write(data);
-                            res.end();
-                            Analytics.insert(req);
-                        }).catch(err => {
-                            console.error(err);
-                            reject(500);
+                let url = req.url.replace(/^\/@(-?\d+),(-?\d+)($|\/)/, '/');
+                const historical = url.match(/^\/historical\/(\d{4,4}-\d{2,2}-\d{2,2})(.chunks)?$/);
+                if(historical) {
+                    const [, date, chunks] = historical;
+                    if(chunks) {
+                        fs.exists(`./backups/h-${date}.chunks`, exists => {
+                            if(!exists) return reject(404);
+                            fs.readFile(`./backups/h-${date}.chunks`, (err, buf) => {
+                                if(err) {
+                                    console.error(err);
+                                    return reject(500);
+                                }
+                                headers['Content-Type'] = 'application/octet-stream';
+                                headers['Content-Length'] = Buffer.byteLength(buf);
+                                res.writeHead(200, headers);
+                                if(!isHead) res.write(buf);
+                                res.end();
+                            })
                         });
-                        break;
-                    case '/' :
-                        const title = 'InfText';
-                        const desc = 'An infinite canvas of text to edit and explore! All changes and edits you make are visible to all other visitors in real time!';
-                        const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta name="theme-color" content="${Thumbnail.colors[Chunks.defaultBackground]}">
-    <meta name="robots" content="index, follow">
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="twitter:creator" content="@Caltrop256">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta property="og:title" content="${title}">
-    <meta property="twitter:title" content="${title}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://${config.domain}/">
-    <meta property="og:description" content="${desc}">
-    <meta property="twitter:description" content="${desc}">
-    <meta property="og:site_name" content="${config.domain}">
-    <meta property="og:image" content="https://${config.domain}${req.url}${req.url.endsWith('/') ? '' : '/'}thumbnail">
-    <title>./${title.toLowerCase()}</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="shortcut icon" type="image/png" href="favicon.png" />
-    <link rel="icon" type="image/png" href="favicon.png" />
-</head>
-<body>
-    <div class="terminal">
-        <p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> ./inftext</p>
-        <noscript>
-            <p><span class="red">[ERR]</span> javascript disabled!</p>
-            <p><span class="red">[ERR]</span> InfText requires javascript for rendering the screen and interacting with other players</p>
-            <p><span class="red">[ERR]</span> we do not use javascript for tracking or cookies, and honor the DoNotTrack header</p>
-            <p><span class="red">[ERR]</span> try enabling javascript and reloading the page!</p>
-            <br>
-            <p>exited with code -1668641893 (0x63757465)</p>
-            <br>
-            <br>
-            <span><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> <span>
-        </noscript>
-        <span id="caret" class="caret">&nbsp;</span>
-        <p class="hidden"><span class="blue">[INFO]</span> loading resources...</p>
-        <script>
-            const reveal = function(i) {
-                const el = document.getElementsByClassName('hidden')[i]; 
-                el.style.display = 'block';
-                document.getElementById('caret').remove();
-                el.insertAdjacentHTML('beforeend', '<span id="caret" class="caret">&nbsp;</span>');
-                return el;
-            };
-            window.onerror = function(message, source, lineno, colno) {
-                window.onerror = null;
-                reveal(3);
-                reveal(4).innerHTML += source.substring(source.lastIndexOf('/') + 1) + ' > ' + 'ln: ' + lineno + ' col: ' + colno + ' - ' + message;
-                reveal(4);
-                reveal(5);
-            }
-            reveal(0);
-        </script>
-        <p class="hidden"><span class="blue">[INFO]</span> connecting...</p>
-        <p class="hidden"><span class="blue">[INFO]</span> drawing chunks...</p>
-        <p class="hidden"><span class="red">[ERR]</span> an error occured while loading the page, your browser may be out of date<br></p>
-        <p class="hidden"><span class="red">[ERR]</span> </p>
-        <p class="hidden"><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> </p>
-    </div>
-    <script defer type="module" src="./draw.mjs"></script>
-</body>
-</html>`;
+                    } else {
+                        const html = getHTML(req);
                         headers['Content-Type'] = 'text/html';
                         headers['Content-Length'] = Buffer.byteLength(html);
                         res.writeHead(200, headers);
@@ -217,33 +214,73 @@ const server = http.createServer((req, res) => {
                         res.end();
                         Analytics.insert(req);
                         break;
-                    default :
-                        if(!paths[url]) return reject(404);
-
-                        const [path, type] = paths[url];
-                        if(config.cache) {
-                            headers['Content-Type'] = type;
-                            headers['Content-Length'] = Buffer.byteLength(path);
-                            headers['Content-Encoding'] = 'deflate';
+                    }
+                } else {
+                    url = url.replace(/^\/historical($|\/)/, '/');
+                    switch(url) {
+                        case '/gateway' :
+                            headers['Content-Type'] = 'application/json';
+                            const body = JSON.stringify({
+                                url: `ws${config.ssl ? 's' : ''}://${config.domain}:${config.port}`,
+                                heartbeat: hearbeatDuration
+                            })
                             res.writeHead(200, headers);
-                            if(!isHead) res.write(path);
+                            headers['Content-Length'] = Buffer.byteLength(body);
+                            if(!isHead) res.write(body);
                             res.end();
-                        } else {
-                            fs.readFile(`../static/${path}`, type.startsWith('image/') ? null : {encoding: 'utf-8'}, (err, data) => {
-                                if(err) {
-                                    console.log(err);
-                                    return reject(500);
-                                }
-                                headers['Content-Type'] = type;
-                                headers['Content-Length'] = Buffer.byteLength(data);
+                            break;
+                        case '/thumbnail' :
+                            const [, x, y] = req.url.match(/^\/@(-?\d+),(-?\d+)($|\/)/) || [, 0, 0];
+                            Thumbnail.getThumbnail(+x, +y).then(data => {
+                                headers['Cache-Control'] = 'no-store';
+                                headers['Content-Type'] = 'image/png';
+                                headers['Content-length'] = Buffer.byteLength(data);
                                 res.writeHead(200, headers);
-                                if(!isHead) {
-                                    res.write(data);
-                                }
+                                if(!isHead) res.write(data);
                                 res.end();
+                                Analytics.insert(req);
+                            }).catch(err => {
+                                console.error(err);
+                                reject(500);
                             });
-                        }
-                        break;
+                            break;
+                        case '/' :
+                            const html = getHTML(req);
+                            headers['Content-Type'] = 'text/html';
+                            headers['Content-Length'] = Buffer.byteLength(html);
+                            res.writeHead(200, headers);
+                            if(!isHead) res.write(html);
+                            res.end();
+                            Analytics.insert(req);
+                            break;
+                        default :
+                            if(!paths[url]) return reject(404);
+    
+                            const [path, type] = paths[url];
+                            if(config.cache) {
+                                headers['Content-Type'] = type;
+                                headers['Content-Length'] = Buffer.byteLength(path);
+                                headers['Content-Encoding'] = 'deflate';
+                                res.writeHead(200, headers);
+                                if(!isHead) res.write(path);
+                                res.end();
+                            } else {
+                                fs.readFile(`../static/${path}`, type.startsWith('image/') ? null : {encoding: 'utf-8'}, (err, data) => {
+                                    if(err) {
+                                        console.log(err);
+                                        return reject(500);
+                                    }
+                                    headers['Content-Type'] = type;
+                                    headers['Content-Length'] = Buffer.byteLength(data);
+                                    res.writeHead(200, headers);
+                                    if(!isHead) {
+                                        res.write(data);
+                                    }
+                                    res.end();
+                                });
+                            }
+                            break;
+                    }
                 }
                 break;
             case 'POST' :
@@ -268,10 +305,10 @@ server.listen(config.port, '127.0.0.1', () => {
     console.log('Now online on port:', config.port, '!');
 })
 const terminate = (socket, reason) => {
-    console.error(reason);
+    console.log(socket._ip, reason);
     socket.terminate();
     if(socket.pos === null) return;
-    ws.clients.forEach(s => {
+    if(ws.clients) ws.clients.forEach(s => {
         if(Array.from(s.claimedChunks).some(c => c == socket.pos.id)) s.send(JSON.stringify({ln: null, col: null, id: socket.id}));
     })
 }
@@ -300,13 +337,18 @@ const sweep = () => {
     else if(swept) console.log(`swept ${swept} empty chunks!`);
 }
 
+const bannedUsers = new Set(JSON.parse(fs.readFileSync('./bannedusers.json')));
+
 ws.on('listening', () => console.log('Websocket Server online!'));
-ws.on('connection', socket => {
+ws.on('connection', (socket, req) => {
+    socket._ip = Analytics.extractIP(req);
     socket.lastHeartbeat = Date.now();
     socket.claimedChunks = new Set();
     socket.pos = null;
     socket.id = crypto.randomUUID();
     socket.allowedCharacters = 85;
+
+    if(bannedUsers.has(socket._ip)) return terminate(socket, 'banned');
     
     socket.send(JSON.stringify({online: ws.clients.size}));
 
@@ -355,7 +397,7 @@ ws.on('connection', socket => {
                 }).catch(console.error);
             } else if(typeof data.update != 'undefined' && Array.isArray(data.update)) {
                 socket.allowedCharacters -= data.update.length;
-                if(socket.allowedCharacters < 0) return;
+                if(socket.allowedCharacters < 0) return socket.send('r');
 
                 for(const char of data.update) {
                     if(typeof char.col != 'number' || typeof char.ln != 'number' || typeof char.id != 'string' || typeof char.code != 'number') return;
@@ -423,7 +465,7 @@ setInterval(() => {
             terminate(socket, 'failed ping check');
         } else {
             socket.send(json);
-            socket.allowedCharacters = Math.min(85 * 4, socket.allowedCharacters += 50);
+            socket.allowedCharacters = 150;
         }
     })
     if(Chunks.cache.size >= 3000) sweep();

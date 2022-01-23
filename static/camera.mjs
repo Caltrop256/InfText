@@ -72,18 +72,25 @@ window.addEventListener('mouseup', up);
 window.addEventListener('touchend', up);
 window.addEventListener('touchcancel', up);
 
-const move = (x, y) => {
+const move = (x, y, vel = true) => {
     if(camera.isMoving) {
-        camera.velX = anchor.x - x;
-        camera.velY = anchor.y - y;
-        camera.x += camera.velX;
-        camera.y += camera.velY;
+        if(vel) {
+            camera.velX = anchor.x - x;
+            camera.velY = anchor.y - y;
+            camera.x += camera.velX;
+            camera.y += camera.velY;
+        } else {
+            camera.velX = 0;
+            camera.velY = 0;
+            camera.x += anchor.x - x;
+            camera.y += anchor.y - y;
+        }
     }
     anchor.x = x;
     anchor.y = y;
 }
 window.addEventListener('mousemove', e => {
-    move(e.clientX, e.clientY);
+    move(e.clientX, e.clientY, true || e.buttons == 1);
 })
 const zoomTo = (prevPoint, point, size) => {
     Chunk.changeFontSize(size);
@@ -108,8 +115,8 @@ window.addEventListener('touchmove', e => {
     }
 })
 
-window.addEventListener('keydown', e => (e.key == 'Control' || e.key == 'Shift') && (camera.scrollMove = false));
-window.addEventListener('keyup', e => (e.key == 'Control' || e.key == 'Shift') && (camera.scrollMove = true));
+window.addEventListener('keydown', e => (e.key == 'Control') && (camera.scrollMove = false));
+window.addEventListener('keyup', e => (e.key == 'Control') && (camera.scrollMove = true));
 window.addEventListener('focusin', e => void (camera.scrollMove = true));
 
 window.addEventListener('wheel', e => {
@@ -135,18 +142,20 @@ window.addEventListener('wheel', e => {
     }
 }, {passive: false})
 
-camera.teleportTo = (x, y) => {
+camera.teleportTo = (x, y, updateState = true) => {
+    if(updateState) Caret.updateState(Caret.col, Caret.ln, false);
     camera.x = x * Chunk.unitWidth - (window.innerWidth * 0.5);
     camera.y = y * Chunk.unitHeight - (window.innerHeight * 0.5);
-    Caret.acol = (Caret.col = +x);
-    Caret.aln = (Caret.ln = +y);
+    Caret._acol = (Caret.col = +x);
+    Caret._aln = (Caret.ln = +y);
     Draw.updateClaimedChunks();
     Draw.needsRedraw = true;
+    if(updateState) Caret.updateState(x, y, false);
 }
 
 window.addEventListener('popstate', e => {
     const state = e.state || {x: 0, y: 0};
-    camera.teleportTo(state.x || 0, state.y || 0);
+    camera.teleportTo(state.x || 0, state.y || 0, false);
 })
 
 export default camera;

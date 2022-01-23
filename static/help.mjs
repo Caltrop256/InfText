@@ -6,6 +6,7 @@ let recentlyUsed = '';
 const exp = {
     disconnected: '       You have been disconnected!\n' +
                   'Please wait while we try to reconnect you',
+    ratelimit: 'you are being rate limited, please wait 10s',
     introduction: [
         '\n', {txt: ' Welcome to InfText', fg: 13}, `
 

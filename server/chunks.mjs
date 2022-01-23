@@ -194,7 +194,8 @@ exp.backupAll = () => {
         }
         const buf = exp.serializeChunkSequence(Array.from(chunks).map(([id, data]) => ({id, chunk: data})));
         if(!fs.existsSync('./backups')) fs.mkdirSync('backups');
-        fs.writeFile(`./backups/b-${new Date().toISOString()}.chunks`, buf, (err) => {
+        const d = new Date(Date.now() - 86400000 / 2);
+        fs.writeFile(`./backups/h-${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}.chunks`, buf, (err) => {
             if(err) console.error(err);
             else console.log(`Backed up ${chunks.size} chunks!`);
         })

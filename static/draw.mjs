@@ -35,6 +35,7 @@ loading.set(
     ).repeat(6)
     .split('').map(c => Chunk.charToCode(c, 8, 0))
 )
+if(Socket.historicalMode) loading.fill(Chunk.blank);
 let placeHolderChunk = null;
 
 const diff = (s0, s1) => {
@@ -75,7 +76,7 @@ exp.updateClaimedChunks = () => {
     }
 
     exp.claimed = newClaim;
-
+    if(Socket.historicalMode) return;
     for(const k of cache) {
         if(!exp.claimed.has(k)) cache.delete(k);
     }
@@ -162,7 +163,7 @@ const draw = () => {
         if(!drawChunk(Math.round(x * cw - Camera.x), Math.round(y * ch - Camera.y), k)) encounteredUnloaded = true;
     }
 
-    if(firstDraw && !encounteredUnloaded) {
+    if(firstDraw && (!encounteredUnloaded || Socket.historicalMode)) {
         firstDraw = false;
         document.getElementsByClassName('terminal')[0].remove();
     }
@@ -238,8 +239,7 @@ const processVisibleText = () => {
                         eln: cy * Chunk.colSize + sty,
                         ecol: cx * Chunk.rowSize + stx + len - 1,
                         callback() {
-                            Camera.teleportTo(x, y);
-                            history.pushState({x, y}, '', `/@${x},${y}`);
+                            Camera.teleportTo(x, y, true);
                         }
                     });
                 }
@@ -256,6 +256,7 @@ exp.drawChunk = drawChunk;
 exp.foreignCarets = foreignCarets;
 exp.drawCaret = drawCaret;
 exp.processVisibleText = processVisibleText;
+exp.caretInfiniteBlink = true;
 export default exp;
 
 const prevCaret = {
@@ -272,7 +273,7 @@ void function loop() {
 
     if(HUD.drawForeignCarets) {
         for(const [, caret] of foreignCarets) {
-            caret.erase = (caret.blinkInd % 72) > 36 && caret.blinkInd < 72 * 15;
+            caret.erase = (caret.blinkInd % 72) > 36 && (exp.caretInfiniteBlink || caret.blinkInd < 72 * 15);
             if(caret.prevLn != caret.ln || caret.prevCol != caret.col || caret.erase != (((caret.blinkInd - 1) % 72) > 36 && (caret.blinkInd - 1) < 72 * 15)) {
                 drawCaret(caret.prevCol, caret.prevLn, true);
                 caret.prevLn = caret.ln;
@@ -286,7 +287,7 @@ void function loop() {
         }
     }
 
-    const erase = (Caret.blinkInd % 72) > 36 && Caret.blinkInd < 72 * 15;
+    const erase = (Caret.blinkInd % 72) > 36 && (exp.caretInfiniteBlink || Caret.blinkInd < 72 * 15);
     Caret.blinkInd += 1;
     if(prevCaret.col != Caret.col || prevCaret.ln != Caret.ln) {
         drawCaret(prevCaret.col, prevCaret.ln, true);

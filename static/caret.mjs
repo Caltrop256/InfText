@@ -7,12 +7,22 @@ import Help from './help.mjs'
 
 const match = location.pathname.match(/^\/@(-?\d+),(-?\d+)/) || [,0, 0];
 const [, startX, startY] = match;
-history.replaceState({}, '', `/@${startX},${startY}`);
 const caret = {
     ln: +startY,
     col: +startX,
-    aln: +startY,
-    acol: +startX,
+    _aln: +startY,
+    _acol: +startX,
+
+    get aln() {return this._aln},
+    get acol() {return this._acol},
+    set aln(v) {
+        this.updateState(this._acol, this._aln = v, true);
+        return v;
+    },
+    set acol(v) {
+        this.updateState(this._acol = v, this._aln, true);
+        return v;
+    },
 
     blinkInd: 0,
 
@@ -22,9 +32,14 @@ const caret = {
     colDir: 1,
     lnDir: 0,
 
-    colorBg: Chunk.defaultBackground,
-    colorFg: Chunk.defaultForeground
+    colorBg: typeof localStorage.getItem('cbg') == 'string' ? localStorage.getItem('cbg') | 0 : Chunk.defaultBackground,
+    colorFg: typeof localStorage.getItem('cfg') == 'string' ? localStorage.getItem('cfg') | 0 : Chunk.defaultForeground,
+
+    updateState(x, y, replace = false) {
+        history[replace ? 'replaceState' : 'pushState']({x, y}, '', `/@${x},${y}${Socket.historicalMode ? Socket.historicalMode[0] : ''}`);
+    }
 }
+caret.updateState(startX, startY, true);
 
 const applyDirection = (n = 1) => {
     caret.ln += n * caret.lnDir;
@@ -447,7 +462,7 @@ caret.handleKeyPress = e => {
                 break;
             case 'R' :
             case 'r' :
-                history.pushState({x: caret.col, y: caret.ln}, '', `/@${caret.col},${caret.ln}`);
+                caret.updateState(caret.col, caret.ln, false);
                 window.location.reload(true);
                 break;
             case '1' : case '2' : case '3' : case '4' : case '5' : case '6' : case '7' : case '8' :
@@ -484,7 +499,7 @@ caret.handleKeyPress = e => {
                 applyDirection();
                 break;
             case 'F5' :
-                history.pushState({x: caret.col, y: caret.ln}, '', `/@${caret.col},${caret.ln}`);
+                caret.updateState(caret.col, caret.ln, false);
                 window.location.reload(true);
                 break;
             case 'ArrowUp' : caret.aln = (caret.ln -= 1); caret.acol = caret.col; break;
