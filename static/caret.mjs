@@ -5,6 +5,7 @@ import HUD from './hud.mjs'
 import Socket from './socket.mjs'
 import Help from './help.mjs'
 
+const lastPos = {x: 0, y: 0}
 const match = location.pathname.match(/^\/@(-?\d+),(-?\d+)/) || [,0, 0];
 const [, startX, startY] = match;
 const caret = {
@@ -16,11 +17,17 @@ const caret = {
     get aln() {return this._aln},
     get acol() {return this._acol},
     set aln(v) {
-        this.updateState(this._acol, this._aln = v, true);
+        if(Math.abs(lastPos.y - v) >= 30) {
+            lastPos.y = v;
+            this.updateState(this._acol, this._aln = v, true);
+        }
         return v;
     },
     set acol(v) {
-        this.updateState(this._acol = v, this._aln, true);
+        if(Math.abs(lastPos.x - v) >= 30) {
+            lastPos.x = v;
+            this.updateState(this._acol = v, this._aln, true);
+        }
         return v;
     },
 
