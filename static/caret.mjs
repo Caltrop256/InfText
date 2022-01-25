@@ -8,11 +8,12 @@ import Help from './help.mjs'
 const lastPos = {x: 0, y: 0}
 const match = location.pathname.match(/^\/@(-?\d+),(-?\d+)/) || [,0, 0];
 const [, startX, startY] = match;
+const limit = n => Math.min(Math.abs(+n), Number.MAX_SAFE_INTEGER) * Math.sign(+n);
 const caret = {
-    ln: +startY,
-    col: +startX,
-    _aln: +startY,
-    _acol: +startX,
+    ln: limit(startY),
+    col: limit(startX),
+    _aln: limit(startY),
+    _acol: limit(startX),
 
     get aln() {return this._aln},
     get acol() {return this._acol},

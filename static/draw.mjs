@@ -54,6 +54,10 @@ exp.updateClaimedChunks = () => {
 
     const cax = Math.floor(Camera.x / cw) - 1;
     const cay = Math.floor(Camera.y / ch) - 1;
+    if(Math.abs(cax) >= Number.MAX_SAFE_INTEGER || Math.abs(cay) >= Number.MAX_SAFE_INTEGER) {
+        console.warn('out of range!');
+        return;
+    }
     const cvpx = Math.ceil(window.innerWidth / cw) + cax + 2;
     const cvpy = Math.ceil(window.innerHeight / ch) + cay + 2;
 
@@ -166,6 +170,7 @@ const draw = () => {
     if(firstDraw && (!encounteredUnloaded || Socket.historicalMode)) {
         firstDraw = false;
         document.getElementsByClassName('terminal')[0].remove();
+        window.onerror = null;
     }
 }
 
