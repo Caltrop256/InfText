@@ -1,14 +1,12 @@
 import Chunks from './chunks.mjs'
-const chunkWidth = 50;
-const chunkHeight = 25;
+import fs from 'fs'
+
 const defaultBackground = 0;
 const defaultForeground = 15;
 const rowSize = 50;
 const colSize = 25;
 
 const constantChunks = new Map();
-
-constantChunks.set('0,0', new Uint32Array(chunkWidth * chunkHeight).fill(7 << 20 | 32));
 
 const writeChar = (code, col, ln) => {
     const id = Math.floor(col / rowSize) + ',' + Math.floor(ln / colSize);
@@ -19,8 +17,24 @@ const writeChar = (code, col, ln) => {
     constantChunks.get(id)[ln * rowSize + col] = code;
 }
 
+const registerChunks = (x, y, width, height) => {
+    const cw = x + Math.floor(width / rowSize);
+    const ch = y + Math.floor(height / colSize);
+
+    for(let cy = y; cy <= ch; ++cy) {
+        for(let cx = x; cx <= cw; ++cx) {
+            constantChunks.set(cx + ',' + cy, new Uint32Array(rowSize * colSize).fill(7 << 20 | 32))
+        }
+    }
+}
+
 const write = (str, x, y, fg = 0, bg = 7) => {
-    const lines = str.split('\n');
+    const lines = str.split('\n').map((l, i) => (i + 1).toString().padStart(4, ' ') + '|' + l);
+    const height = lines.length;
+    const width = Math.max(...lines.map(l => l.length));
+
+    registerChunks(0, 0, width, height);
+    
     for(let cy = 0; cy < lines.length; ++cy) {
         for(let i = 0, cx = 0; i < lines[cy].length; ++i, ++cx) {
             switch(lines[cy][i]) {
@@ -35,35 +49,7 @@ const write = (str, x, y, fg = 0, bg = 7) => {
     }
 }
 
-write(`
-
-An infinite canvas of text to edit and explore!
-All changes you make are visible to all other
-visitors in real time! bababbaabaaa
-bwah bwah bwah hhhhhhh
-
- Navigation:               Shortcuts:
-  
- ←↑→   : move caret         ctrl+c: copy
- lmouse: pan & set caret    ctrl+v: paste
- TAB   : 4 spaces           ctrl+x: cut
- Enter : next line          ctrl+z: undo
- PgUp  : screen up          ctrl+y: redo
- PgDn  : screen down        rmouse: copy colors
- ctrl+→: set caret to edge  alt+←→: undo/redo tp
- HOME  : return line        mwheel: font size
-
-Set-up a portal to easily share your creations!
-Just write down the coordinates like this
-
-           create something pretty and have fun!
-                                          ~sarah
-`, 1, 1);
-
-write('Welcome to <name>                  (11/jan/2022)', 1, 1);
-write('@38,19', 43, 20, 4);
-write('[source]', 1, 23, 4);
-
-constantChunks.delete('0,0');
+const text = fs.readFileSync('../static/socket.mjs', {encoding: 'utf-8'});
+//write(text, 0, 0, 0, 7);
 
 export default constantChunks;

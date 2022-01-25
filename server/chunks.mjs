@@ -145,6 +145,91 @@ const chunkIsNotEmpty = data => {
 }
 
 exp.serializeChunkSequence = chunks => {
+    chunks = chunks.sort(({id: a}, {id: b}) => {
+        const [x0, y0] = a.split(',').map(Number);
+        const [x1, y1] = b.split(',').map(Number);
+        if(y0 < y1) return -1;
+        else if(y0 > y1) return 1;
+        else if(x0 < x1) return -1;
+        else if(x0 > x1) return 1;
+        else return 0;
+    })
+
+    const headLength = chunks.length * 5 + 1;
+    const head = new Uint32Array(headLength);
+    let hI = 0;
+    head[hI++] = chunks.length;
+
+    let bodyLength = 1;
+    for(const chunk of chunks) {
+        const [x, y] = chunk.id.split(',').map(s => BigInt(s) + 9223372036854775808n);
+        head[hI++] = Number(x & 0xffffffffn);
+        head[hI++] = Number(x >> 32n);
+        head[hI++] = Number(y & 0xffffffffn);
+        head[hI++] = Number(y >> 32n);
+
+        if(chunk.chunk.__empty) head[hI++] = 0;
+        else {
+            chunk.chunk = encodeChunk(chunk.chunk);
+            head[hI++] = bodyLength;
+            bodyLength += chunk.chunk.length;
+        }
+    }
+    const body = new Uint32Array(bodyLength);
+    let bI = 0;
+    body[bI++] = 1009990707;
+    for(const chunk of chunks) {
+        if(chunk.chunk.__empty) continue;
+        for(let j = 0; j < chunk.chunk.length; ++j) {
+            body[bI++] = chunk.chunk[j];
+        }
+    }
+
+    const hBuf = new Uint8Array(head.buffer);
+    const bBuf = new Uint8Array(body.buffer);
+    let bbI = bBuf.byteLength;
+    let bhI = hBuf.byteLength;
+    let len = bbI + bhI;
+    const out = Buffer.alloc(len);
+    while(bbI --> 0) out[--len] = bBuf[bbI];
+    while(bhI --> 0) out[--len] = hBuf[bhI];
+
+    return out;
+}
+
+const indexIntoChunkSequence = (sequence, set) => {
+    const chunkLen = chunkWidth * chunkHeight;
+    const u32 = new Uint32Array(sequence.buffer);
+    let hI = 0;
+    const chunks = u32[hI++];
+    const head = new Map();
+    const headLen = chunks * 5 + 1;
+    while(hI < headLen) {
+        head.set(
+            ((BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n)
+            + ',' + ((BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n),
+            u32[hI++]
+        )
+    }
+
+    const out = [];
+    let ind;
+    for(const id of set) {
+        if(ind = head.get(id)) {
+            let bI = ind + headLen;
+            let n = 0;
+            let j = 0;
+            while(j < chunkLen) {
+                j += (u32[bI++] >>> 24) + 1;
+                n += 1;
+            }
+            out.push({id, chunk: new Uint32Array(u32, bI * 4, n)});
+        } else out.push({id, chunk: {__empty: true}});
+    }
+    return out;
+}
+
+/*exp.serializeChunkSequence = chunks => {
     let totalLen = 0;
     for(const chunk of chunks) {
         if(chunk.chunk.__empty) chunk.chunk = new Uint32Array([0, 0]);
@@ -168,7 +253,7 @@ exp.serializeChunkSequence = chunks => {
     }
 
     return Buffer.from(u32.buffer);
-}
+}*/
 
 const storeNonEmpty = () => {
     const toStore = [];
@@ -195,7 +280,7 @@ exp.backupAll = () => {
         const buf = exp.serializeChunkSequence(Array.from(chunks).map(([id, data]) => ({id, chunk: data})));
         if(!fs.existsSync('./backups')) fs.mkdirSync('backups');
         const d = new Date(Date.now() - 86400000 / 2);
-        fs.writeFile(`./backups/h-${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}.chunks`, buf, (err) => {
+        fs.writeFile(`./backups/h-${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}.chunks`, buf, (err) => {
             if(err) console.error(err);
             else console.log(`Backed up ${chunks.size} chunks!`);
         })
@@ -211,6 +296,10 @@ exp.storeChunksInDatabase = storeChunksInDatabase;
 exp.chunkIsNotEmpty = chunkIsNotEmpty;
 
 export default exp;
+
+process.on('message', e => {
+    console.log(e);
+})
 
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
     storeNonEmpty()

@@ -17,16 +17,18 @@ const caret = {
     get aln() {return this._aln},
     get acol() {return this._acol},
     set aln(v) {
+        this._aln = v;
         if(Math.abs(lastPos.y - v) >= 30) {
             lastPos.y = v;
-            this.updateState(this._acol, this._aln = v, true);
+            this.updateState(this._acol, this._aln, true);
         }
         return v;
     },
     set acol(v) {
+        this._acol = v;
         if(Math.abs(lastPos.x - v) >= 30) {
             lastPos.x = v;
-            this.updateState(this._acol = v, this._aln, true);
+            this.updateState(this._acol, this._aln, true);
         }
         return v;
     },
@@ -43,7 +45,11 @@ const caret = {
     colorFg: typeof localStorage.getItem('cfg') == 'string' ? localStorage.getItem('cfg') | 0 : Chunk.defaultForeground,
 
     updateState(x, y, replace = false) {
-        history[replace ? 'replaceState' : 'pushState']({x, y}, '', `/@${x},${y}${Socket.historicalMode ? Socket.historicalMode[0] : ''}`);
+        try {
+            history[replace ? 'replaceState' : 'pushState']({x, y}, '', `/@${x},${y}${Socket.historicalMode ? Socket.historicalMode[0] : ''}`);
+        } catch(e) {
+            console.warn(e);
+        }
     }
 }
 caret.updateState(startX, startY, true);
@@ -422,11 +428,15 @@ caret.handleKeyPress = e => {
 
     if(e.ctrlKey) {
         switch(e.key) {
+            case 'Z' :
             case 'z' :
-                caret.undo();
+                if(e.shiftKey) for(let i = 0; i < 8; ++i) caret.undo();
+                else caret.undo();
                 break;
+            case 'Y' :
             case 'y' :
-                caret.redo();
+                if(e.shiftKey) for(let i = 0; i < 8; ++i) caret.redo();
+                else caret.redo();
                 break;
             case 'ArrowUp' :
                 if(!e.repeat) caret.ln = (caret.aln -= Math.floor(Draw.canvas.height / Chunk.unitHeight));

@@ -1,3 +1,5 @@
+import colorVariations from "./colors.mjs";
+
 const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -7,46 +9,8 @@ const exp = {
     fontSize: 16,
     fontFamily: localStorage.getItem('font') || '"Courier New",monospace,Courier',
     fitFont: true,
-    colorVariations: {
-        legacy: [
-            '#000000',
-            '#800000',
-            '#008000',
-            '#808000',
-            '#000080',
-            '#800080',
-            '#008080',
-            '#c0c0c0',
-            '#808080',
-            '#ff0000',
-            '#00ff00',
-            '#ffff00',
-            '#0000ff',
-            '#ff00ff',
-            '#00ffff',
-            '#ffffff'
-        ],
-        default: [
-            '#000000', // black
-            '#AA0000', // dark red
-            '#00AA00', // dark green
-            '#FFAA00', // gold
-            '#0000AA', // dark blue
-            '#AA00AA', // magenta
-            '#00AAAA', // aqua
-            '#AAAAAA', // light grey
-            '#555555', // dark grey
-            '#FF5555', // bright red
-            '#55FF55', // bright green
-            '#FFFF55', // yellow
-            '#5555FF', // blue
-            '#FF55FF', // light magenta
-            '#55FFFF', // cyan
-            '#FFFFFF'  // white
-        ]
-    }
 }
-exp.colors = exp.colorVariations[localStorage.getItem('scheme') || 'default'];
+exp.colors = colorVariations[localStorage.getItem('scheme') || 'default'];
 
 exp.drawImage = (() => {
     const letterTable = new Map();

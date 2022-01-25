@@ -77,6 +77,7 @@ const paths = {
     '/caret.mjs': ['caret.mjs', 'application/javascript; charset=utf-8'],
     '/chunk.mjs': ['chunk.mjs', 'application/javascript; charset=utf-8'],
     '/letter.mjs': ['letter.mjs', 'application/javascript; charset=utf-8'],
+    '/colors.mjs': ['colors.mjs', 'application/javascript; charset=utf-8'],
     '/hud.mjs': ['hud.mjs', 'application/javascript; charset=utf-8'],
     '/help.mjs': ['help.mjs', 'application/javascript; charset=utf-8'],
     '/socket.mjs': ['socket.mjs', 'application/javascript; charset=utf-8']
@@ -88,32 +89,36 @@ if(config.cache) for(const path in paths) {
     });
 }
 
+const getHtmlHead = (title, desc, imgUrl) => {
+    return `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta name="theme-color" content="${Thumbnail.colors[Chunks.defaultBackground]}">
+    <meta name="robots" content="index, follow">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="twitter:creator" content="@Caltrop256">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="og:title" content="${title}">
+    <meta property="twitter:title" content="${title}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://${config.domain}/">
+    <meta property="og:description" content="${desc}">
+    <meta property="twitter:description" content="${desc}">
+    <meta property="og:site_name" content="${config.domain}">
+    <meta property="og:image" content="${imgUrl}">
+    <title>./${title.toLowerCase()}</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    </head>`
+}
+
 const getHTML = req => {
     const title = 'InfText';
     const desc = 'An infinite canvas of text to edit and explore! All changes and edits you make are visible to all other visitors in real time!';
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta name="theme-color" content="${Thumbnail.colors[Chunks.defaultBackground]}">
-<meta name="robots" content="index, follow">
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="twitter:creator" content="@Caltrop256">
-<meta name="twitter:card" content="summary_large_image">
-<meta property="og:title" content="${title}">
-<meta property="twitter:title" content="${title}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://${config.domain}/">
-<meta property="og:description" content="${desc}">
-<meta property="twitter:description" content="${desc}">
-<meta property="og:site_name" content="${config.domain}">
-<meta property="og:image" content="https://${config.domain}${req.url}${req.url.endsWith('/') ? '' : '/'}thumbnail">
-<title>./${title.toLowerCase()}</title>
-<link rel="stylesheet" href="style.css">
-<link rel="shortcut icon" type="image/png" href="favicon.png" />
-<link rel="icon" type="image/png" href="favicon.png" />
-</head>
+    const html = getHtmlHead(title, desc, `https://${config.domain}${req.url}${req.url.endsWith('/') ? '' : '/'}thumbnail`) + `
 <body>
 <div class="terminal">
 <p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> ./inftext</p>
@@ -216,6 +221,25 @@ const server = http.createServer((req, res) => {
                         break;
                     }
                 } else {
+                    if(url == '/historical') {
+                        fs.readdir('./backups', (err, files) => {
+                            if(err) return reject(500);
+                            let html = getHtmlHead('InfText', 'history viewer', `https://${config.domain}/favicon.png`);
+                            html += '<body><div class="terminal">';
+                            html += `<p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> ./inftext --history</p>`;
+                            html += files.filter(f => /^h-\d{4,4}-\d{2,2}-\d{2,2}.chunks$/.test(f))
+                                    .map(f => `<p><span class="blue">[INFO]</span> <a href="./historical/${f.substring(2, 12)}">${f.substring(2, 12)}</a></p>`)
+                                    .join('\n');
+                            html += `<br><p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> <span id="caret" class="caret">&nbsp;</span></p>`
+                            html += '</div></body></html>';
+                            headers['Content-Type'] = 'text/html';
+                            headers['Content-Length'] = Buffer.byteLength(html);
+                            res.writeHead(200, headers);
+                            if(!isHead) res.write(html);
+                            res.end();
+                        })
+                        return;
+                    }
                     url = url.replace(/^\/historical($|\/)/, '/');
                     switch(url) {
                         case '/gateway' :

@@ -17,6 +17,32 @@ const exp = {
 }
 
 const readSequence = buf => {
+    const chunkLen = Chunk.rowSize * Chunk.colSize;
+    const u32 = new Uint32Array(buf);
+    let hI = 0;
+    const chunks = u32[hI++];
+    const headLength = chunks * 5 + 1;
+    while(hI < headLength) {
+        const x = (BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n;
+        const y = (BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n;
+        const ind = u32[hI++];
+        const id = x + ',' + y;
+        if(!ind) Draw.cache.set(id, Chunk.fromUint32Array(new Uint32Array(chunkLen).fill(Chunk.blank)));
+        else {
+            const chunkData = new Uint32Array(chunkLen);
+            let j = 0;
+            let bI = ind + headLength;
+            while(j < chunkLen) {
+                let k = (u32[bI] >>> 24) + 1;
+                const val = u32[bI++] &= 0xffffff;
+                while(k --> 0) chunkData[j++] = val;
+            }
+            Draw.cache.set(id, Chunk.fromUint32Array(chunkData));
+        }
+    }
+}
+
+/*const readSequence = buf => {
     const u32 = new Uint32Array(buf);
     const chunkLen = Chunk.rowSize * Chunk.colSize;
     let i = 0;
@@ -40,7 +66,7 @@ const readSequence = buf => {
         const id = x + ',' + y;
         Draw.cache.set(id, Chunk.fromUint32Array(chunkData));
     }
-}
+}*/
 
 if(exp.historicalMode) {
     fetch(location.pathname + '.chunks')
@@ -136,6 +162,7 @@ if(exp.historicalMode) {
                         exp._connectionState = 1;
                         Camera.refuseMovement = false;
                         HUD.borderFg = 15;
+                        Draw.needsRedraw = true;
                     }, 1000 * 10);
                     return;
                 case '__disconnected' :

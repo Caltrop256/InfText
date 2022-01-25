@@ -6,6 +6,7 @@ import HUD from './hud.mjs'
 const camera = {
     refuseMovement: true,
     scrollMove: true,
+    invertScrollAxis: false,
     scrollSpeedModifier: 0.5,
     scrollSpeedX: 2,
     scrollSpeedY: 1,
@@ -115,21 +116,45 @@ window.addEventListener('touchmove', e => {
     }
 })
 
-window.addEventListener('keydown', e => (e.key == 'Control') && (camera.scrollMove = false));
-window.addEventListener('keyup', e => (e.key == 'Control') && (camera.scrollMove = true));
-window.addEventListener('focusin', e => void (camera.scrollMove = true));
+window.addEventListener('keydown', e => {
+    switch(e.key) {
+        case 'Control' :
+            camera.scrollMove = false;
+            break;
+        case 'Shift' :
+            camera.invertScrollAxis = true;
+            break;
+    }
+});
+window.addEventListener('keyup', e => {
+    switch(e.key) {
+        case 'Control' :
+            camera.scrollMove = true;
+            break;
+        case 'Shift' :
+            camera.invertScrollAxis = false;
+            break;
+    }
+});
+window.addEventListener('focusin', e => {
+    camera.scrollMove = true;
+    camera.invertScrollAxis = false;
+});
 
 window.addEventListener('wheel', e => {
     e.preventDefault();
     if(camera.refuseMovement) return;
 
+    const memberVert = camera.invertScrollAxis ? 'x' : 'y';
+    const memberHoriz = camera.invertScrollAxis ? 'y' : 'x';
+
     if(camera.scrollMove) {
         if(camera.smoothScroll) {
-            camera.velX += e.deltaX * camera.scrollSpeedX * camera.scrollSpeedModifier * 0.25;
-            camera.velY += e.deltaY * camera.scrollSpeedY * camera.scrollSpeedModifier * 0.25;
+            camera['vel' + memberHoriz.toUpperCase()] += e.deltaX * camera.scrollSpeedX * camera.scrollSpeedModifier * 0.25;
+            camera['vel' + memberVert.toUpperCase()] += e.deltaY * camera.scrollSpeedY * camera.scrollSpeedModifier * 0.25;
         } else {
-            camera.x += Math.min(Math.abs(e.deltaX) * 1, Infinity) * Math.sign(e.deltaX) * camera.scrollSpeedX * camera.scrollSpeedModifier;
-            camera.y += Math.min(Math.abs(e.deltaY) * 1, Infinity) * Math.sign(e.deltaY) * camera.scrollSpeedY * camera.scrollSpeedModifier;
+            camera[memberHoriz] += Math.min(Math.abs(e.deltaX) * 1, Infinity) * Math.sign(e.deltaX) * camera.scrollSpeedX * camera.scrollSpeedModifier;
+            camera[memberVert] += Math.min(Math.abs(e.deltaY) * 1, Infinity) * Math.sign(e.deltaY) * camera.scrollSpeedY * camera.scrollSpeedModifier;
         }
     } else {
         if(e.deltaY >= 0 && Chunk.fontSize <= 4) return;

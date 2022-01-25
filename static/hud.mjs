@@ -5,6 +5,7 @@ import Camera from './camera.mjs'
 import Socket from './socket.mjs'
 import Popups from './help.mjs'
 import Letters from './letter.mjs'
+import colorVariations from './colors.mjs'
 
 let dirInd = 0;
 const exp = {
@@ -174,7 +175,7 @@ const menus = {
     '[FILE]': {
         altKey: 'f',
         items: [
-            ['o', 'open', () => window.open('github.com', '_blank')],
+            ['o', 'open', () => window.open('https://github.com/Caltrop256/InfText', '_blank')],
             ['s', 'save   (ctrl+s)', () => save(exp.lastType)],
             ['a', 'save as...', [
                 ['.txt', save.bind(null, 'text/plain')],
@@ -312,8 +313,14 @@ const menus = {
                 ['lucida console', () => Chunk.changeFontSize(Chunk.fontSize, localStorage.setItem('font', Chunk.fontFamily = '"Lucida Console"'), Draw.cache.forEach(c => c.imageData = null))],
             ]],
             ['e', 'color scheme', [
-                ['default', () => {localStorage.setItem('scheme', 'default'); Letters.colors = Letters.colorVariations.default; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null)}],
-                ['legacy', () => {localStorage.setItem('scheme', 'legacy'); Letters.colors = Letters.colorVariations.legacy; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null);}]
+                ...Object.getOwnPropertyNames(colorVariations).map(name => [
+                    name,
+                    () => {localStorage.setItem('scheme', name); Letters.colors = colorVariations[name]; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null)}
+                ])
+            ]],
+            ['r', 'render mode', [
+                ['desktop', () => {Chunk.letter = Letters.putImageData; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null)}],
+                ['mobile', () => {Chunk.letter = Letters.drawImage; Chunk.changeFontSize(Chunk.fontSize); Draw.cache.forEach(c => c.imageData = null)}]
             ]]
         ]
     },
@@ -495,6 +502,7 @@ exp.saveBlob = (name, blob) => {
 }
 
 window.addEventListener('mouseup', e => {
+    if(e.button == 2) return;
     const fln = Math.floor((e.clientY - Draw.canvas.offsetTop) / Chunk.unitHeight);
     const fcol = Math.floor((e.clientX - Draw.canvas.offsetLeft) / Chunk.unitWidth);
     const ln = Math.floor((Camera.y + (e.clientY - Draw.canvas.offsetTop)) / Chunk.unitHeight);
