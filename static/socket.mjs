@@ -2,6 +2,7 @@ import HUD from './hud.mjs'
 import Draw from './draw.mjs'
 import Chunk from './chunk.mjs'
 import Camera from './camera.mjs'
+import C from './setup.mjs'
 
 let ready = false;
 const loadStack = [];
@@ -16,63 +17,14 @@ const exp = {
     historicalMode: location.pathname.match(/\/historical\/(\d{4,4}-\d{2,2}-\d{2,2})(.chunks)?$/)
 }
 
-const readSequence = buf => {
-    const chunkLen = Chunk.rowSize * Chunk.colSize;
-    const u32 = new Uint32Array(buf);
-    let hI = 0;
-    const chunks = u32[hI++];
-    const headLength = chunks * 5 + 1;
-    while(hI < headLength) {
-        const x = (BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n;
-        const y = (BigInt(u32[hI++]) | ((BigInt(u32[hI++])) << 32n)) - 9223372036854775808n;
-        const ind = u32[hI++];
-        const id = x + ',' + y;
-        if(!ind) Draw.cache.set(id, Chunk.fromUint32Array(new Uint32Array(chunkLen).fill(Chunk.blank)));
-        else {
-            const chunkData = new Uint32Array(chunkLen);
-            let j = 0;
-            let bI = ind + headLength;
-            while(j < chunkLen) {
-                let k = (u32[bI] >>> 24) + 1;
-                const val = u32[bI++] &= 0xffffff;
-                while(k --> 0) chunkData[j++] = val;
-            }
-            Draw.cache.set(id, Chunk.fromUint32Array(chunkData));
-        }
-    }
-}
-
-/*const readSequence = buf => {
-    const u32 = new Uint32Array(buf);
-    const chunkLen = Chunk.rowSize * Chunk.colSize;
-    let i = 0;
-    const getI64 = () => (BigInt(u32[i++]) | ((BigInt(u32[i++])) << 32n)) - 9223372036854775808n;
-    while(i < u32.length) {
-        const x = getI64();
-        const y = getI64();
-        const chunkData = new Uint32Array(chunkLen);
-        if(!u32[i] && !u32[i + 1]) {
-            let j = chunkLen;
-            while(j --> 0) chunkData[j] = Chunk.blank;
-            i += 2;
-        } else {
-            let j = 0;
-            while(j < chunkLen) {
-                let k = (u32[i] >>> 24) + 1;
-                const val = u32[i++] &= 0xffffff;
-                while(k --> 0) chunkData[j++] = val;
-            }
-        }
-        const id = x + ',' + y;
-        Draw.cache.set(id, Chunk.fromUint32Array(chunkData));
-    }
-}*/
-
 if(exp.historicalMode) {
     fetch(location.pathname + '.chunks')
     .then(res => res.arrayBuffer())
     .then(buf => {
-        readSequence(buf);
+        console.log(new Uint32Array(buf));
+        C.run('decodeChunkSequence', (x, y, chunkData) => {
+            Draw.cache.set(x + ',' + y, Chunk.fromUint32Array(chunkData));
+        }, C.allocateArray(new Uint32Array(buf)));
         Draw.updateClaimedChunks();
         Draw.needsRedraw = true;
         Camera.refuseMovement = false;
@@ -174,7 +126,9 @@ if(exp.historicalMode) {
             
             if(msg.data instanceof Blob) {
                 msg.data.arrayBuffer().then(buf => {
-                    readSequence(buf);
+                    C.run('decodeChunkSequence', (x, y, chunkData) => {
+                        Draw.cache.set(x + ',' + y, Chunk.fromUint32Array(chunkData));
+                    }, C.allocateArray(new Uint32Array(buf)));
                     Draw.needsRedraw = true;
                 });
             } else {

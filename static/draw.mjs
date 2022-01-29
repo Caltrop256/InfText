@@ -52,6 +52,8 @@ exp.updateClaimedChunks = () => {
     const cw = Chunk.rowSize * Chunk.unitWidth;
     const ch = Chunk.colSize * Chunk.unitHeight;
 
+    console.log(Camera.x, Camera.y);
+
     const cax = Math.floor(Camera.x / cw) - 1;
     const cay = Math.floor(Camera.y / ch) - 1;
     if(Math.abs(cax) >= Number.MAX_SAFE_INTEGER || Math.abs(cay) >= Number.MAX_SAFE_INTEGER) {

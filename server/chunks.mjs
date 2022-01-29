@@ -1,6 +1,7 @@
 import mysql from 'mysql';
 import fs from 'fs';
 import constantChunks from './constant-chunks.mjs';
+import Zlib from 'zlib';
 
 const config = JSON.parse(fs.readFileSync('./config.json', {encoding: 'utf-8'}));
 
@@ -280,7 +281,10 @@ exp.backupAll = () => {
         const buf = exp.serializeChunkSequence(Array.from(chunks).map(([id, data]) => ({id, chunk: data})));
         if(!fs.existsSync('./backups')) fs.mkdirSync('backups');
         const d = new Date(Date.now() - 86400000 / 2);
-        fs.writeFile(`./backups/h-${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}.chunks`, buf, (err) => {
+        fs.writeFile(
+            `./backups/h-${d.getUTCFullYear()}-${(d.getUTCMonth() + 1).toString().padStart(2, '0')}-${d.getUTCDate().toString().padStart(2, '0')}.chunks`, 
+            Zlib.gzipSync(buf), 
+            (err) => {
             if(err) console.error(err);
             else console.log(`Backed up ${chunks.size} chunks!`);
         })

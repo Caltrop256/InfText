@@ -69,6 +69,8 @@ const config = JSON.parse(fs.readFileSync('./config.json', {encoding: 'utf-8'}))
 const allowedMethods = ['HEAD', 'GET', 'POST', 'OPTIONS'];
 
 const paths = {
+    '/setup.mjs': ['setup.mjs', 'application/javascript; charset=utf-8'],
+    '/client.wasm': ['client.wasm', 'application/wasm'],
     '/style.css': ['style.css', 'text/css'],
     '/favicon.ico': ['favicon.ico', 'image/x-icon'],
     '/favicon.png': ['favicon.png', 'image/png'],
@@ -158,13 +160,13 @@ reveal(0);
 <p class="hidden"><span class="red">[ERR]</span> </p>
 <p class="hidden"><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> </p>
 </div>
-<script defer type="module" src="./draw.mjs"></script>
+<script defer type="module" src="./setup.mjs"></script>
 </body>
 </html>`;
 return html;
 }
 
-const hearbeatDuration = 5000;
+const hearbeatDuration = 20000;
 const server = http.createServer((req, res) => {
     const headers = {
         'Connection': 'keep-alive',
@@ -205,6 +207,7 @@ const server = http.createServer((req, res) => {
                                 }
                                 headers['Content-Type'] = 'application/octet-stream';
                                 headers['Content-Length'] = Buffer.byteLength(buf);
+                                if(buf[0] == 0x1F && buf[1] == 0x8B && buf[2] == 0x08) headers['Content-Encoding'] = 'gzip';
                                 res.writeHead(200, headers);
                                 if(!isHead) res.write(buf);
                                 res.end();
@@ -289,7 +292,7 @@ const server = http.createServer((req, res) => {
                                 if(!isHead) res.write(path);
                                 res.end();
                             } else {
-                                fs.readFile(`../static/${path}`, type.startsWith('image/') ? null : {encoding: 'utf-8'}, (err, data) => {
+                                fs.readFile(`../static/${path}`, (err, data) => {
                                     if(err) {
                                         console.log(err);
                                         return reject(500);

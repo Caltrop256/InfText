@@ -10,17 +10,19 @@ a {
     position: absolute;
     top: 0px;
     left: 0px;
-    padding: 8px;
+    padding-left: 8px;
     width: 100vw;
     height: 100vh;
     z-index: 999999;
     font-family: 'Courier New', Courier, monospace;
     font-size: 16px;
     color: #ffffff;
-    line-height: 6px;
-    line-height-step: 0px;
     background-color: #000000;
     user-select: none;
+}
+
+.terminal p {
+    margin: 1px;
 }
 
 .hidden {
