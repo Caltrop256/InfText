@@ -51,6 +51,7 @@ import util from 'util'
 import {CronJob} from 'cron'
 
 process.on('uncaughtException', err => {
+	console.log(err);
     const stream = fs.createWriteStream('./err.out', {flags: 'a', encoding: 'utf-8'});
     stream.write(`\n[${new Date().toUTCString()}][EXCEPTION] ${err.stack || err.message}\n`, () => process.exit(1));
 });
@@ -166,7 +167,7 @@ reveal(0);
 return html;
 }
 
-const hearbeatDuration = 20000;
+const hearbeatDuration = 5000;
 const server = http.createServer((req, res) => {
     const headers = {
         'Connection': 'keep-alive',
@@ -228,7 +229,7 @@ const server = http.createServer((req, res) => {
                         fs.readdir('./backups', (err, files) => {
                             if(err) return reject(500);
                             let html = getHtmlHead('InfText', 'history viewer', `https://${config.domain}/favicon.png`);
-                            html += '<body><div class="terminal">';
+                            html += '<body style="overflow-y: auto; background-color: #000000;"><div class="terminal">';
                             html += `<p><span class="green">[root@${config.domain} </span>~<span class="green">]$</span> ./inftext --history</p>`;
                             html += files.filter(f => /^h-\d{4,4}-\d{2,2}-\d{2,2}.chunks$/.test(f))
                                     .map(f => `<p><span class="blue">[INFO]</span> <a href="./historical/${f.substring(2, 12)}">${f.substring(2, 12)}</a></p>`)
@@ -448,13 +449,14 @@ ws.on('connection', (socket, req) => {
             terminate(socket, 'caused error');
         }
     });
-
-    socket.on('close', () => {
-        if(socket.pos === null) return;
-        ws.clients.forEach(s => {
-            if(Array.from(s.claimedChunks).some(c => c == socket.pos.id)) s.send(JSON.stringify({ln: null, col: null, id: socket.id}));
+    //amazing library, ws ~cheese
+    for (let event of ['error','close'])
+        socket.on(event, () => {
+            if(socket.pos === null) return;
+            ws.clients.forEach(s => {
+                if(Array.from(s.claimedChunks).some(c => c == socket.pos.id)) s.send(JSON.stringify({ln: null, col: null, id: socket.id}));
+            })
         })
-    })
 })
 
 setInterval(() => {
